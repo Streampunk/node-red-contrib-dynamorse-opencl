@@ -1,0 +1,40 @@
+{
+  "name": "node-red-contrib-dynamorse-opencl",
+  "version": "0.0.1",
+  "description": "Dynamorse processing nodes using OpenCL for Node-RED",
+  "author": "Streampunk Media Ltd",
+  "license": "Apache-2.0",
+  "keywords": [
+    "node-red",
+    "opencl"
+  ],
+  "dependencies": {
+    "nodencl": "^0.0.2"
+  },
+  "devDependencies": {
+    "dynamorse-test": "^0.2.0",
+    "eslint": "5.0.1",
+    "tape": "^4.9.0"
+  },
+  "scripts": {
+    "test": "tape test/*Spec.js",
+    "lint": "eslint **/*.js",
+    "lint-html": "eslint **/*.js -f html -o ./reports/lint-results.html",
+    "lint-fix": "eslint --fix **/*.js"
+  },
+  "node-red": {
+    "nodes": {
+      "unpack": "nodes/10-clUnpack.js",
+      "pack": "nodes/12-clPack.js",
+      "OpenCL Context": "nodes/config/clContext.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Streampunk/node-red-contrib-dynamorse-opencl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Streampunk/node-red-contrib-dynamorse-opencl/issues"
+  },
+  "homepage": "https://github.com/Streampunk/node-red-contrib-dynamorse-opencl#readme"
+}
