@@ -22,6 +22,7 @@
         name: { value : ""},
         maxBuffer : { value : 10, validate : RED.validators.number() },
         description : { value : "" },
+        dstColorimetry : { value : "BT.709" },
         sendDeviceBuffer: { value: true },
         clContext: { value : "", type : "OpenCL Context", required : true, },
       },
@@ -49,11 +50,19 @@
     <input type="number" id="node-input-maxBuffer" placeholder="10" style="width: 100px">
   </div>
   <div class="form-row">
-    <label for="node-input-sendDeviceBuffer"><i class="fa fa-hand-o-right"></i> Send Device Buffer</label>
+    <label for="node-input-dstColorimetry" style="text-align: left"> &nbsp;<i class="fa fa-pencil-square-o"></i> output colorimetry</label>
+    <select id="node-input-dstColorimetry" style="width: 120px; vertical-align: top;">
+      <option value="BT.601">BT.601</option>
+      <option value="BT.709" selected>BT.709</option>
+      <option value="BT.2020">BT.2020</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-sendDeviceBuffer"><i class="fa fa-hand-o-right"></i> send device buffer</label>
     <input type="checkbox" checked id="node-input-sendDeviceBuffer" style="width: 20px; vertical-align: top;">
   </div>
   <div class="form-row">
-    <label for="node-input-clContext"><i class="fa fa-paw"></i> OpenCL Context</label>
+    <label for="node-input-clContext"><i class="fa fa-paw"></i> OpenCL context</label>
     <input type="text" id="node-input-clContext">
   </div>
 </script>
@@ -88,11 +97,15 @@
     <td>Maximum number of grains to buffer before overflowing.</td>
    </tr>
    <tr>
-    <td><i class="fa fa-hand-o-right"></i> Send Device Buffer</td>
+    <td><i class="fa fa-pencil-square-o"></i> output colorimetry</td>
+    <td>Output video colorimetry - enables colourspace conversion from source colorimetry.</td>
+   </tr>
+   <tr>
+    <td><i class="fa fa-hand-o-right"></i> send device buffer</td>
     <td>If checked the output will be a buffer that is not host accessible - it is mapped to the OpenCL device. Unnecessary copies between device and host are slow so this option can be used as an optimsation when the following node is OpenCL based.</td>
    </tr>
    <tr>
-    <td><i class="fa fa-paw"></i> OpenCL Context</td>
+    <td><i class="fa fa-paw"></i> OpenCL context</td>
     <td>The context holds the currently selected platform and device for OpenCL processing.</td>
    </tr>
   </table>

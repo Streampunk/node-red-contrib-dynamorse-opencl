@@ -60,6 +60,12 @@ const colParams = {
   }
 };
 
+function getColSpec(colStr, height) {
+  return (colStr.indexOf('601') >= 0) ? (576 === height) ? '601_625' : '601_525' :
+    (colStr.indexOf('2020') >= 0) ? '2020' :
+      '709';
+}
+
 function gamma2linearLUT(colSpec) {
   if (!colParams.hasOwnProperty(colSpec)) {
     console.error(`Unrecognised colourspace ${colSpec} - defaulting to BT.709`);
@@ -103,6 +109,22 @@ function linear2gammaLUT(colSpec) {
       lutArr[i] = alpha * (fi**gamma) - (alpha-1);
   }
   return lutArr;
+}
+
+function rgb2monoCoeffs(colSpec) {
+  if (!colParams.hasOwnProperty(colSpec)) {
+    console.error(`Unrecognised colourspace ${colSpec} - defaulting to BT.709`);
+    colSpec = '709';
+  }
+
+  const kR = colParams[colSpec].kR;
+  const kB = colParams[colSpec].kB;
+  const kG = 1.0 - kR - kB;
+
+  const monoCoeffs = [...new Array(1)].map(() => new Float32Array(4));
+  monoCoeffs[0] = Float32Array.from([kR, kG, kB, 0.0]);
+
+  return monoCoeffs;
 }
 
 function ycbcr2rgbMatrix(colSpec, numBits, lumaBlack, lumaWhite, chrRange) {
@@ -324,9 +346,13 @@ function matrixFlatten(a) {
 }
 
 module.exports = {
+  getColSpec: getColSpec,
+
   ycbcr2rgbMatrix: ycbcr2rgbMatrix,
   rgb2ycbcrMatrix: rgb2ycbcrMatrix,
 
+  rgb2monoCoeffs: rgb2monoCoeffs,
+  
   gamma2linearLUT: gamma2linearLUT,
   linear2gammaLUT: linear2gammaLUT,
 
