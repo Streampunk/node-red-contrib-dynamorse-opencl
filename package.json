@@ -9,12 +9,13 @@
     "opencl"
   ],
   "dependencies": {
+    "osc": "^2.2.3",
     "nodencl": "^0.0.2"
   },
   "devDependencies": {
-    "dynamorse-test": "^0.2.0",
-    "eslint": "5.0.1",
-    "tape": "^4.9.0"
+    "dynamorse-test": "^0.2.1",
+    "eslint": "5.1.0",
+    "tape": "^4.9.1"
   },
   "scripts": {
     "test": "tape test/*Spec.js",
@@ -26,6 +27,7 @@
     "nodes": {
       "unpack": "nodes/10-clUnpack.js",
       "pack": "nodes/12-clPack.js",
+      "OpenCL monochrome": "nodes/20-clMonochrome.js",
       "OpenCL Context": "nodes/config/clContext.js"
     }
   },
