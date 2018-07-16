@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-dynamorse-opencl",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Dynamorse processing nodes using OpenCL for Node-RED",
   "author": "Streampunk Media Ltd",
   "license": "Apache-2.0",
@@ -10,7 +10,7 @@
   ],
   "dependencies": {
     "osc": "^2.2.3",
-    "nodencl": "^0.0.2"
+    "nodencl": "^0.0.3"
   },
   "devDependencies": {
     "dynamorse-test": "^0.2.1",
