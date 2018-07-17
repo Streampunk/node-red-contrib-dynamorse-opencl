@@ -15,29 +15,30 @@
 
 const nodencl = require('nodencl');
 
+async function createContext(node, platformIndex, deviceIndex) {
+  const platformInfo = nodencl.getPlatformInfo()[platformIndex];
+  // node.log(JSON.stringify(platformInfo, null, 2));
+  node.log(`OpenCL context: platform index ${platformIndex}, device index ${deviceIndex}`);
+  node.log(`OpenCL context: vendor: ${platformInfo.vendor}, type: ${platformInfo.devices[deviceIndex].type[0]}`);
+
+  return await nodencl.createContext({
+    platformIndex: platformIndex, 
+    deviceIndex: deviceIndex
+  });
+}
+
 module.exports = function(RED) {
   function OpenCLContext (config) {
     RED.nodes.createNode(this, config);
 
     this.platformIndex = +config.platformIndex;
     this.deviceIndex = +config.deviceIndex;
-    this.context = null;
+    this.initialised = false;
+    this.context = createContext(this, this.platformIndex, this.deviceIndex);
   }
 
-  OpenCLContext.prototype.getContext = async function() {
-    if (!this.context) {
-      const platformInfo = nodencl.getPlatformInfo()[this.platformIndex];
-      this.log(JSON.stringify(platformInfo, null, 2));
-      // node.log(platformInfo.vendor, platformInfo.devices[this.deviceIndex].type);
-    
-      this.context = await nodencl.createContext({
-        platformIndex: this.platformIndex, 
-        deviceIndex: this.deviceIndex
-      });
-      return this.context;
-    } else {
-      return this.context;
-    }
+  OpenCLContext.prototype.getContext = function() {
+    return this.context;
   };
 
   RED.nodes.registerType('OpenCL Context', OpenCLContext);

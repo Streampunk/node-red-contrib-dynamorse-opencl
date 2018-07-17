@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-dynamorse-opencl",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Dynamorse processing nodes using OpenCL for Node-RED",
   "author": "Streampunk Media Ltd",
   "license": "Apache-2.0",
@@ -25,9 +25,10 @@
   },
   "node-red": {
     "nodes": {
-      "unpack": "nodes/10-clUnpack.js",
-      "pack": "nodes/12-clPack.js",
+      "OpenCL unpack": "nodes/10-clUnpack.js",
+      "OpenCL pack": "nodes/12-clPack.js",
       "OpenCL monochrome": "nodes/20-clMonochrome.js",
+      "OpenCL mix": "nodes/24-clMix.js",
       "OpenCL Context": "nodes/config/clContext.js"
     }
   },
