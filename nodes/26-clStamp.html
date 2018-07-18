@@ -15,27 +15,27 @@
 -->
 
 <script type="text/javascript">
-    RED.nodes.registerType('OpenCL pack',{
-      category: 'valve',
-      color: '#A6BBCF',
-      defaults: {
-        name: { value: ""},
-        maxBuffer: { value: 10, validate: RED.validators.number() },
-        description: { value: "" },
-        packing : { value : "v210" },
-        sendDeviceBuffer: { value: false },
-        clContext: { value: "", type: "OpenCL Context", required: true, },
-      },
-      inputs:1,
-      outputs:1,
-      icon: "valve.png",
-      label: function() {
-        return this.name || "OpenCL pack";
-      }
-    });
+  RED.nodes.registerType('OpenCL stamp', {
+    category: 'valve',
+    color: '#A6BBCF',
+    defaults: {
+      name: { value: ""},
+      maxBuffer: { value: 10, validate: RED.validators.number() },
+      description: { value: "" },
+      premultiplied: { value: true },
+      sendDeviceBuffer: { value: true },
+      clContext: { value: "", type: "OpenCL Context", required: true }
+    },
+    inputs:1,
+    outputs:1,
+    icon: "valve.png",
+    label: function() {
+      return this.name || "OpenCL stamp";
+    }
+  });
 </script>
 
-<script type="text/x-red" data-template-name="OpenCL pack">
+<script type="text/x-red" data-template-name="OpenCL stamp">
   <!-- Common to all valve nodes -->
   <div class="form-row">
     <label for="node-input-name"><i class="fa fa-tag"></i> name</label>
@@ -50,15 +50,10 @@
     <input type="number" id="node-input-maxBuffer" placeholder="10" style="width: 100px">
   </div>
   <div class="form-row">
-    <label for="node-input-packing"><i class="fa fa-briefcase"></i> packing</label>
-    <select id="node-input-packing" style="width: 120px;">
-      <option value="v210" selected>V210</option>
-      <option value="RGBA8">RGBA8</option>
-    </select>
-  </div>
-  <div class="form-row">
-    <label for="node-input-sendDeviceBuffer"><i class="fa fa-hand-o-right"></i> Send Device Buffer</label>
-    <input type="checkbox" id="node-input-sendDeviceBuffer" style="width: 20px; vertical-align: top;">
+    <label for="node-input-premultiplied" style="width: 100px;><i class="fa fa-times-circle"></i> pre-multiplied</label>
+    <input type="checkbox" id="node-input-premultiplied" style="width: 20px; margin-right:40px;">
+    <label for="node-input-sendDeviceBuffer" style="width: 140px;><i class="fa fa-hand-o-right"></i> send device buffer</label>
+    <input type="checkbox" checked id="node-input-sendDeviceBuffer" style="width: 20px;">
   </div>
   <div class="form-row">
     <label for="node-input-clContext"><i class="fa fa-paw"></i> OpenCL Context</label>
@@ -73,9 +68,9 @@
 }
 </style>
 
-<script type="text/x-red" data-help-name="OpenCL pack">
-  <h1>Pack source using OpenCL</h1>
-  <p>Convert from RGBA float grains to YCbCr packed grains. Creates a new NMOS flow with the correct attributes.</p>
+<script type="text/x-red" data-help-name="OpenCL stamp">
+  <h1>Perform a stamp between two inputs using OpenCL</h1>
+  <p>Sources must be OpenCL buffers containing RGBA float grains with the same attributes. Results are delivered as RGBA float grains. Creates a new NMOS flow with the same attributes as the sources.</p>
 
   <h3>Parameters</h3>
   <div class="param-table">
@@ -96,11 +91,11 @@
     <td>Maximum number of grains to buffer before overflowing.</td>
    </tr>
    <tr>
-    <td><i class="fa fa-briefcase"></i> packing</td>
-    <td>Selected packing specification for output grains.</td>
+    <td><i class="fa fa-times-circle"></i> pre-multiplied</td>
+    <td>If checked the foreground element will be considered to be already multiplied by the key and an additive stamp will be performed.</td>
    </tr>
    <tr>
-    <td><i class="fa fa-hand-o-right"></i> Send Device Buffer</td>
+    <td><i class="fa fa-hand-o-right"></i> send device buffer</td>
     <td>If checked the output will be a buffer that is not host accessible - it is mapped to the OpenCL device. Unnecessary copies between device and host are slow so this option can be used as an optimsation when the following node is OpenCL based.</td>
    </tr>
    <tr>

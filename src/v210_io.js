@@ -13,7 +13,6 @@
   limitations under the License.
 */
 
-const nodencl = require('nodencl');
 const colMaths = require('./colourMaths.js');
 
 const v210Kernel = `
@@ -22,7 +21,7 @@ const v210Kernel = `
                      __private unsigned int width,
                      __constant float4* restrict colMatrix,
                      __global float* restrict gammaLut,
-                     __constant float4* restrict gamutMatrix) {
+                     __constant float3* restrict gamutMatrix) {
     uint item = get_global_id(0);
     bool lastItemOnLine = get_local_id(0) == get_local_size(0) - 1;
 
@@ -38,13 +37,9 @@ const v210Kernel = `
     float4 colMatG = colMatrix[1];
     float4 colMatB = colMatrix[2];
 
-    // optimise loading of the 3x3 gamut matrix
-    float4 gamutMat0 = gamutMatrix[0];
-    float4 gamutMat1 = gamutMatrix[1];
-    float4 gamutMat2 = gamutMatrix[2];
-    float3 gamutMatR = (float3)(gamutMat0.s0, gamutMat0.s1, gamutMat0.s2);
-    float3 gamutMatG = (float3)(gamutMat0.s3, gamutMat1.s0, gamutMat1.s1);
-    float3 gamutMatB = (float3)(gamutMat1.s2, gamutMat1.s3, gamutMat2.s0);
+    float3 gamutMatR = gamutMatrix[0];
+    float3 gamutMatG = gamutMatrix[1];
+    float3 gamutMatB = gamutMatrix[2];
 
     for (uint i=0; i<numLoops; ++i) {
       uint4 w = input[inOff];
@@ -196,6 +191,14 @@ function getPitchBytes(width) {
   return getPitch(width) * 8 / 3;
 }
 
+function setDestTags(dstTags) {
+  dstTags.bits = 10;
+  dstTags.packing = 'v210';
+  dstTags.sampling = 'YCbCr-4:2:2';
+  dstTags.hasAlpha = false;
+  return dstTags;
+}
+
 function fillBuf(buf, width, height) {
   const pitchBytes = getPitchBytes(width);
   buf.fill(0);
@@ -240,15 +243,6 @@ function dumpBuf(buf, width, numLines) {
   }
 }
 
-async function context(platformIndex, deviceIndex) {
-  const context = await nodencl.createContext({
-    platformIndex: platformIndex, 
-    deviceIndex: deviceIndex
-  });
-
-  return context;
-}
-
 function reader(context, width, height, colSpec, outColSpec) {
   this.context = context;
   this.width = width;
@@ -290,7 +284,7 @@ reader.prototype.init = async function() {
   });
 };
 
-reader.prototype.fromV210 = async function(src, dst) {
+reader.prototype.fromPacked = async function(src, dst) {
   return await this.v210ReadProgram.run({input: src, output: dst, width: this.width, colMatrix: this.colMatrix, 
     gammaLut: this.gammaLut, gamutMatrix: this.gamutMatrix});
 };
@@ -329,17 +323,17 @@ writer.prototype.init = async function() {
   });
 };
 
-writer.prototype.toV210 = async function(src, dst) {
+writer.prototype.toPacked = async function(src, dst) {
   return await this.v210WriteProgram.run({input: src, output: dst, width: this.width, colMatrix: this.colMatrix, 
     gammaLut: this.gammaLut});
 };
 
 module.exports = {
-  context: context,
   reader: reader,
   writer: writer,
 
   getPitchBytes: getPitchBytes,
+  setDestTags: setDestTags,
   fillBuf: fillBuf,
-  dumpBuf: dumpBuf,
+  dumpBuf: dumpBuf
 };

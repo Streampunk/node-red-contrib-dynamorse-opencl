@@ -17,6 +17,7 @@
 const util = require('util');
 const clValve = require('./clValve.js');
 const v210_io = require('../src/v210_io.js');
+const rgba8_io = require('../src/rgba8_io.js');
 const colMaths = require('../src/colourMaths.js');
 
 module.exports = function (RED) {
@@ -37,29 +38,29 @@ module.exports = function (RED) {
       node.width = width;
       node.height = height;
 
-      const v210Reader = new v210_io.reader(context, width, height, srcColSpec, dstColSpec);
-      await v210Reader.init();
+      const reader = new node.io.reader(context, width, height, srcColSpec, dstColSpec);
+      await reader.init();
 
-      const numBytesV210 = v210_io.getPitchBytes(width) * height;
-      node.v210Src = await context.createBuffer(numBytesV210, 'readonly', 'coarse');
+      const numBytesSrc = node.io.getPitchBytes(width) * height;
+      node.packedSrc = await context.createBuffer(numBytesSrc, 'readonly', 'coarse');
 
       const numBytesRGBA = node.width * node.height * 4 * 4;
       node.rgbaDst = [];
       for (let i=0; i<config.maxBuffer+1; ++i)
         node.rgbaDst.push(await context.createBuffer(numBytesRGBA, 'readwrite', 'coarse'));
     
-      return v210Reader;
+      return reader;
     }
 
     async function readGrain(srcBuf) {
-      let v210Src = node.v210Src;
+      let packedSrc = node.packedSrc;
       if (srcBuf.hasOwnProperty('hostAccess'))
-        v210Src = srcBuf;
+        packedSrc = srcBuf;
       else
-        await v210Src.hostAccess('writeonly', srcBuf);
+        await packedSrc.hostAccess('writeonly', srcBuf);
       const rgbaDst = node.rgbaDst[(frameNum++)%config.maxBuffer+1];
 
-      /*let timings = */await node.v210Reader.fromV210(v210Src, rgbaDst);
+      /*let timings = */await node.reader.fromPacked(packedSrc, rgbaDst);
       // console.log(`read: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       if (!sendDevice)
@@ -71,6 +72,12 @@ module.exports = function (RED) {
 
     this.makeDstTags = (srcTags) => {
       let dstTags = JSON.parse(JSON.stringify(srcTags));
+      switch(srcTags.packing) {
+      case 'v210': node.io = v210_io; break;
+      case 'RGBA8': node.io = rgba8_io; break;
+      default: throw new Error('Unsupported grain format in OpenCL unpack');
+      }
+
       if ('video' === dstTags.format) {
         dstTags.bits = 32;
         dstTags.packing = 'RGBA_f32';
@@ -86,7 +93,7 @@ module.exports = function (RED) {
       const dstColSpec = colMaths.getColSpec(dstTags.video.colorimetry, dstTags.video.height);
       return clContext.getContext()
         .then(context => setupReader(context, srcVideoTags[0].width, srcVideoTags[0].height, srcColSpec, dstColSpec))
-        .then(reader => node.v210Reader = reader);
+        .then(reader => node.reader = reader);
     };
 
     this.processGrain = (flowType, srcBufArray) => {

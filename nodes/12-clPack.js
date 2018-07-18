@@ -17,6 +17,7 @@
 const util = require('util');
 const clValve = require('./clValve.js');
 const v210_io = require('../src/v210_io.js');
+const rgba8_io = require('../src/rgba8_io.js');
 const colMaths = require('../src/colourMaths.js');
 
 module.exports = function (RED) {
@@ -34,49 +35,51 @@ module.exports = function (RED) {
       return node.warn('OpenCL Context config not found!!');
 
     async function setupWriter(context, width, height, colSpec) {
-      const v210Writer = new v210_io.writer(context, width, height, colSpec);
-      await v210Writer.init();
+      const writer = new node.io.writer(context, width, height, colSpec);
+      await writer.init();
 
-      const numBytesV210 = v210_io.getPitchBytes(width) * height;
-      node.v210Dst = [];
+      const numBytesPacked = node.io.getPitchBytes(width) * height;
+      node.packedDst = [];
       for (let i=0; i<config.maxBuffer+1; ++i)
-        node.v210Dst.push(await context.createBuffer(numBytesV210, 'writeonly', 'coarse'));
+        node.packedDst.push(await context.createBuffer(numBytesPacked, 'writeonly', 'coarse'));
 
-      return v210Writer;
+      return writer;
     }
 
     async function writeGrain(src) {
       if (!src.hasOwnProperty('hostAccess'))
         throw new Error('OpenCL pack expects an OpenCL source buffer');
 
-      const v210Dst = node.v210Dst[frameNum++%config.maxBuffer+1];
+      const packedDst = node.packedDst[frameNum++%config.maxBuffer+1];
 
-      /*let timings = */await node.v210Writer.toV210(src, v210Dst);
+      /*let timings = */await node.writer.toPacked(src, packedDst);
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       if (!sendDevice)
-        await v210Dst.hostAccess('readonly');
-      return v210Dst;
+        await packedDst.hostAccess('readonly');
+      return packedDst;
     }
 
     this.getProcessSources = cable => cable.filter((c, i) => i < numInputs);
 
     this.makeDstTags = (srcTags) => {
-      let dstTags = JSON.parse(JSON.stringify(srcTags));
-      if ('video' === dstTags.format) {
-        dstTags.bits = 10;
-        dstTags.packing = 'v210';
-        dstTags.sampling = 'YCbCr-4:2:2';
+      switch(config.packing) {
+      case 'v210': node.io = v210_io; break;
+      case 'RGBA8': node.io = rgba8_io; break;
+      default: throw new Error('Unsupported grain format in OpenCL pack');
       }
+
+      let dstTags = JSON.parse(JSON.stringify(srcTags));
+      if ('video' === dstTags.format)
+        dstTags = node.io.setDestTags(dstTags);
       return dstTags;
     };
 
-    this.setInfo = (srcTags/*, dstTags, logLevel*/) => {
-      const srcVideoTags = srcTags.filter(t => t.format === 'video');
-      const srcColSpec = colMaths.getColSpec(srcVideoTags[0].colorimetry, srcVideoTags[0].height);
+    this.setInfo = (srcTags, dstTags/*, logLevel*/) => {
+      const srcColSpec = colMaths.getColSpec(dstTags.video.colorimetry, dstTags.video.height);
       return clContext.getContext()
-        .then(context => setupWriter(context, srcVideoTags[0].width, srcVideoTags[0].height, srcColSpec))
-        .then(writer => node.v210Writer = writer);
+        .then(context => setupWriter(context, dstTags.video.width, dstTags.video.height, srcColSpec))
+        .then(writer => node.writer = writer);
     };
 
     this.processGrain = (flowType, srcBufArray) => {

@@ -339,9 +339,11 @@ function matrixInvert3x3(a) {
 }
 
 function matrixFlatten(a) {
-  let result = new Float32Array(a.length * a[0].length);
+  // 3 column matrices are flattened to 4 floats per row to suit OpenCL float3 spec
+  const cols = (3 === a[0].length) ? 4 : a[0].length;
+  let result = new Float32Array(a.length * cols);
   return result.map((row, i) => {
-    return a[(i/a[0].length)>>>0][i%a[0].length];
+    return (a[0].length === i%cols) ? 0.0 : a[(i/cols)>>>0][i%cols];
   });
 }
 
