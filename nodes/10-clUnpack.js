@@ -27,28 +27,21 @@ module.exports = function (RED) {
 
     const node = this;
     const numInputs = 1;
-    let frameNum = 0;
     const sendDevice = config.sendDeviceBuffer;
+    node.ownerName = `Unpack-${node.id}`;
 
     const clContext = RED.nodes.getNode(config.clContext);
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
-    async function setupReader(context, width, height, srcColSpec, dstColSpec) {
+    async function setupReader(width, height, srcColSpec, dstColSpec) {
       node.width = width;
       node.height = height;
+      node.numBytesRGBA = node.width * node.height * 4 * 4;
 
-      const reader = new node.io.reader(context, width, height, srcColSpec, dstColSpec);
+      const reader = new node.io.reader(node, clContext, width, height, srcColSpec, dstColSpec);
       await reader.init();
 
-      const numBytesSrc = node.io.getPitchBytes(width) * height;
-      node.packedSrc = await context.createBuffer(numBytesSrc, 'readonly', 'coarse');
-
-      const numBytesRGBA = node.width * node.height * 4 * 4;
-      node.rgbaDst = [];
-      for (let i=0; i<config.maxBuffer+1; ++i)
-        node.rgbaDst.push(await context.createBuffer(numBytesRGBA, 'readwrite', 'coarse'));
-    
       return reader;
     }
 
@@ -56,9 +49,15 @@ module.exports = function (RED) {
       let packedSrc = node.packedSrc;
       if (srcBuf.hasOwnProperty('hostAccess'))
         packedSrc = srcBuf;
-      else
+      else {
+        if (!packedSrc) {
+          const numBytesSrc = node.io.getPitchBytes(node.width) * node.height;
+          node.packedSrc = await clContext.createBuffer(numBytesSrc, 'readonly', 'coarse', node.ownerName);
+          packedSrc = node.packedSrc;
+        }
         await packedSrc.hostAccess('writeonly', srcBuf);
-      const rgbaDst = node.rgbaDst[(frameNum++)%config.maxBuffer+1];
+      }
+      const rgbaDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
       /*let timings = */await node.reader.fromPacked(packedSrc, rgbaDst);
       // console.log(`read: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
@@ -91,8 +90,7 @@ module.exports = function (RED) {
       const srcVideoTags = srcTags.filter(t => t.format === 'video');
       const srcColSpec = colMaths.getColSpec(srcVideoTags[0].colorimetry, srcVideoTags[0].height);
       const dstColSpec = colMaths.getColSpec(dstTags.video.colorimetry, dstTags.video.height);
-      return clContext.getContext()
-        .then(context => setupReader(context, srcVideoTags[0].width, srcVideoTags[0].height, srcColSpec, dstColSpec))
+      return setupReader(srcVideoTags[0].width, srcVideoTags[0].height, srcColSpec, dstColSpec)
         .then(reader => node.reader = reader);
     };
 
@@ -103,7 +101,11 @@ module.exports = function (RED) {
         return srcBufArray[0];
     };
 
-    this.quit = cb => cb();
+    this.quit = cb => {
+      node.reader = null;
+      clContext.releaseBuffers(node.ownerName);
+      cb();
+    };
     this.closeValve = done => this.close(done);
   }
   util.inherits(clUnpack, clValve);

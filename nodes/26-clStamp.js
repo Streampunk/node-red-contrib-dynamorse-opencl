@@ -25,22 +25,18 @@ module.exports = function (RED) {
 
     const node = this;
     const numInputs = 2;
-    let frameNum = 0;
     const sendDevice = config.sendDeviceBuffer;
     const premultiplied = config.premultiplied;
+    node.ownerName = `Stamp-${node.id}`;
 
     const clContext = RED.nodes.getNode(config.clContext);
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
     async function setupStamp(context, width, height) {
-      const stampProcess = new stamp(context, width, height);
+      node.numBytesRGBA = width * height * 4 * 4;
+      const stampProcess = new stamp(node, context, width, height);
       await stampProcess.init();
-
-      const numBytesRGBA = width * height * 4 * 4;
-      node.stampDst = [];
-      for (let i=0; i<config.maxBuffer+1; ++i)
-        node.stampDst.push(await context.createBuffer(numBytesRGBA, 'readwrite', 'coarse'));
 
       return stampProcess;
     }
@@ -51,10 +47,12 @@ module.exports = function (RED) {
           throw new Error('OpenCL stamp expects OpenCL source buffers');
       });
 
-      const stampDst = node.stampDst[frameNum++%(config.maxBuffer+1)];
+      const stampDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
       /*let timings = */await node.process.process(srcArray, stampDst, premultiplied);
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
+
+      srcArray.forEach(src => src.release());
 
       if (!sendDevice)
         await stampDst.hostAccess('readonly');
@@ -91,8 +89,7 @@ module.exports = function (RED) {
 
     this.setInfo = (srcTags/*, dstTags, logLevel*/) => {
       const srcVideoTags = srcTags.filter(t => t.format === 'video');
-      return clContext.getContext()
-        .then(context => setupStamp(context, srcVideoTags[0].width, srcVideoTags[0].height))
+      return setupStamp(clContext, srcVideoTags[0].width, srcVideoTags[0].height)
         .then(process => node.process = process);
     };
 
@@ -103,7 +100,11 @@ module.exports = function (RED) {
         return srcBufArray[0];
     };
 
-    this.quit = cb => cb();
+    this.quit = cb => {
+      node.process = null;
+      clContext.releaseBuffers(node.ownerName);
+      cb();
+    };
 
     this.closeValve = done => this.close(done);
   }

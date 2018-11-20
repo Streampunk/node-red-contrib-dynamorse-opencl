@@ -27,8 +27,8 @@ module.exports = function (RED) {
 
     const node = this;
     const numInputs = 1;
-    let frameNum = 0;
     const sendDevice = config.sendDeviceBuffer;
+    node.ownerName = `Monochrome-${node.id}`;
 
     let mixVal = +config.mix;
     const oscServ = oscServer.getInstance(this);
@@ -38,14 +38,10 @@ module.exports = function (RED) {
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
-    async function setupMono(context, width, height, colSpec) {
-      const monoProcess = new monochrome(context, width, height, colSpec);
+    async function setupMono(width, height, colSpec) {
+      node.numBytesRGBA = width * height * 4 * 4;
+      const monoProcess = new monochrome(node, clContext, width, height, colSpec);
       await monoProcess.init();
-
-      const numBytesRGBA = width * height * 4 * 4;
-      node.monoDst = [];
-      for (let i=0; i<config.maxBuffer+1; ++i)
-        node.monoDst.push(await context.createBuffer(numBytesRGBA, 'readwrite', 'coarse'));
 
       return monoProcess;
     }
@@ -54,10 +50,12 @@ module.exports = function (RED) {
       if (!src.hasOwnProperty('hostAccess'))
         throw new Error('OpenCL monochrome expects an OpenCL source buffer');
 
-      const monoDst = node.monoDst[frameNum++%(config.maxBuffer+1)];
+      const monoDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
       /*let timings = */await node.process.process(src, monoDst, mix);
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
+
+      src.release();
 
       if (!sendDevice)
         await monoDst.hostAccess('readonly');
@@ -74,8 +72,7 @@ module.exports = function (RED) {
     this.setInfo = (srcTags/*, dstTags, logLevel*/) => {
       const srcVideoTags = srcTags.filter(t => t.format === 'video');
       const colSpec = colMaths.getColSpec(srcVideoTags[0].colorimetry, srcVideoTags[0].height);
-      return clContext.getContext()
-        .then(context => setupMono(context, srcVideoTags[0].width, srcVideoTags[0].height, colSpec))
+      return setupMono(srcVideoTags[0].width, srcVideoTags[0].height, colSpec)
         .then(process => node.process = process);
     };
 
@@ -86,7 +83,11 @@ module.exports = function (RED) {
         return srcBufArray[0];
     };
 
-    this.quit = cb => cb();
+    this.quit = cb => {
+      node.process = null;
+      clContext.releaseBuffers(node.ownerName);
+      cb();
+    };
 
     this.closeValve = done => {
       oscServ.removeControl(config.mixControl);

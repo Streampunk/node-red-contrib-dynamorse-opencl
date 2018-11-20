@@ -243,7 +243,8 @@ function dumpBuf(buf, width, numLines) {
   }
 }
 
-function reader(context, width, height, colSpec, outColSpec) {
+function reader(node, context, width, height, colSpec, outColSpec) {
+  this.node = node;
   this.context = context;
   this.width = width;
 
@@ -268,13 +269,13 @@ function reader(context, width, height, colSpec, outColSpec) {
 }
 
 reader.prototype.init = async function() {
-  this.colMatrix = await this.context.createBuffer(this.colMatrixArray.byteLength, 'readonly', 'none');
+  this.colMatrix = await this.context.createBuffer(this.colMatrixArray.byteLength, 'readonly', 'none', this.node.ownerName);
   await this.colMatrix.hostAccess('writeonly', Buffer.from(this.colMatrixArray.buffer));
 
-  this.gammaLut = await this.context.createBuffer(this.gammaArray.byteLength, 'readonly', 'coarse');
+  this.gammaLut = await this.context.createBuffer(this.gammaArray.byteLength, 'readonly', 'coarse', this.node.ownerName);
   await this.gammaLut.hostAccess('writeonly', Buffer.from(this.gammaArray.buffer));
 
-  this.gamutMatrix = await this.context.createBuffer(this.gamutMatrixArray.byteLength, 'readonly', 'none');
+  this.gamutMatrix = await this.context.createBuffer(this.gamutMatrixArray.byteLength, 'readonly', 'none', this.node.ownerName);
   await this.gamutMatrix.hostAccess('writeonly', Buffer.from(this.gamutMatrixArray.buffer));
 
   this.v210ReadProgram = await this.context.createProgram(v210Kernel, {
@@ -289,7 +290,8 @@ reader.prototype.fromPacked = async function(src, dst) {
     gammaLut: this.gammaLut, gamutMatrix: this.gamutMatrix});
 };
 
-function writer(context, width, height, colSpec) {
+function writer(node, context, width, height, colSpec) {
+  this.node = node;
   this.context = context;
   this.width = width;
 
@@ -310,10 +312,10 @@ function writer(context, width, height, colSpec) {
 }
 
 writer.prototype.init = async function() {
-  this.colMatrix = await this.context.createBuffer(this.colMatrixArray.byteLength, 'readonly', 'none');
+  this.colMatrix = await this.context.createBuffer(this.colMatrixArray.byteLength, 'readonly', 'none', this.node.ownerName);
   await this.colMatrix.hostAccess('writeonly', Buffer.from(this.colMatrixArray.buffer));
 
-  this.gammaLut = await this.context.createBuffer(this.gammaArray.byteLength, 'readonly', 'coarse');
+  this.gammaLut = await this.context.createBuffer(this.gammaArray.byteLength, 'readonly', 'coarse', this.node.ownerName);
   await this.gammaLut.hostAccess('writeonly', Buffer.from(this.gammaArray.buffer));
 
   this.v210WriteProgram = await this.context.createProgram(v210Kernel, {

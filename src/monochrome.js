@@ -46,7 +46,8 @@ const monochromeKernel = `
   }
 `;
 
-function monochrome(context, width, height, colSpec) {
+function monochrome(node, context, width, height, colSpec) {
+  this.node = node;
   this.context = context;
   this.width = width;
 
@@ -61,7 +62,7 @@ function monochrome(context, width, height, colSpec) {
 }
 
 monochrome.prototype.init = async function() {
-  this.monoCoeffs = await this.context.createBuffer(this.monoCoeffsArray.byteLength, 'readonly', 'none');
+  this.monoCoeffs = await this.context.createBuffer(this.monoCoeffsArray.byteLength, 'readonly', 'none', this.node.ownerName);
   await this.monoCoeffs.hostAccess('writeonly', Buffer.from(this.monoCoeffsArray.buffer));
 
   this.monochromeProgram = await this.context.createProgram(monochromeKernel, {

@@ -44,7 +44,8 @@ const stampKernel = `
   }
 `;
 
-function stamp(context, width, height) {
+function stamp(node, context, width, height) {
+  this.node = node;
   this.context = context;
   this.width = width;
 

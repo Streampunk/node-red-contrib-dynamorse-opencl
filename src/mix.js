@@ -43,7 +43,8 @@ const mixKernel = `
   }
 `;
 
-function mix(context, width, height) {
+function mix(node, context, width, height) {
+  this.node = node;
   this.context = context;
   this.width = width;
 

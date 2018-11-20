@@ -9,12 +9,13 @@
     "opencl"
   ],
   "dependencies": {
-    "osc": "^2.2.3",
-    "nodencl": "^0.0.3"
+    "nodencl": "^0.1.1",
+    "osc": "^2.2.4",
+    "serialport": "^7.0.2"
   },
   "devDependencies": {
     "dynamorse-test": "^0.2.1",
-    "eslint": "5.1.0",
+    "eslint": "5.9.0",
     "tape": "^4.9.1"
   },
   "scripts": {
@@ -30,6 +31,7 @@
       "OpenCL monochrome": "nodes/20-clMonochrome.js",
       "OpenCL mix": "nodes/24-clMix.js",
       "OpenCL stamp": "nodes/26-clStamp.js",
+      "OpenCL blur": "nodes/50-clBlur.js",
       "OpenCL Context": "nodes/config/clContext.js"
     }
   },

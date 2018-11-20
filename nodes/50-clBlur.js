@@ -16,89 +16,75 @@
 'use strict';
 const util = require('util');
 const clValve = require('./clValve.js');
-const v210_io = require('../src/v210_io.js');
-const rgba8_io = require('../src/rgba8_io.js');
-const colMaths = require('../src/colourMaths.js');
+const blur = require('../src/blur.js');
 
 module.exports = function (RED) {
-  function clPack (config) {
+  function clBlur (config) {
     RED.nodes.createNode(this, config);
     clValve.call(this, RED, config);
 
     const node = this;
     const numInputs = 1;
-    let frameNum = 0;
     const sendDevice = config.sendDeviceBuffer;
-    node.ownerName = `Pack-${node.id}`;
+    const blurDepth = +config.blurDepth;
+    node.ownerName = `Blur-${node.id}`;
 
     const clContext = RED.nodes.getNode(config.clContext);
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
-    async function setupWriter(width, height, colSpec) {
-      node.numBytesPacked = node.io.getPitchBytes(width) * height;
+    async function setupBlur(width, height) {
+      node.numBytesRGBA = width * height * 4 * 4;
+      const blurProcess = new blur(node, clContext, width, height, blurDepth);
+      await blurProcess.init();
 
-      const writer = new node.io.writer(node, clContext, width, height, colSpec);
-      await writer.init();
-
-      node.packedDst = [];
-      for (let i=0; i<config.maxBuffer+1; ++i)
-        node.packedDst.push(await clContext.createBuffer(node.numBytesPacked, 'writeonly', 'coarse', node.ownerName));
-
-      return writer;
+      return blurProcess;
     }
 
-    async function writeGrain(src) {
+    async function blurGrain(src) {
       if (!src.hasOwnProperty('hostAccess'))
-        throw new Error('OpenCL pack expects an OpenCL source buffer');
+        throw new Error('OpenCL monochrome expects an OpenCL source buffer');
 
-      const packedDst = node.packedDst[frameNum++%config.maxBuffer+1];
+      const blurDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
-      /*let timings = */await node.writer.toPacked(src, packedDst);
+      /*let timings = */await node.process.process(src, blurDst);
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       src.release();
 
       if (!sendDevice)
-        await packedDst.hostAccess('readonly');
-      return packedDst;
+        await blurDst.hostAccess('readonly');
+      return blurDst;
     }
 
     this.getProcessSources = cable => cable.filter((c, i) => i < numInputs);
 
     this.makeDstTags = (srcTags) => {
-      switch(config.packing) {
-      case 'v210': node.io = v210_io; break;
-      case 'RGBA8': node.io = rgba8_io; break;
-      default: throw new Error('Unsupported grain format in OpenCL pack');
-      }
-
       let dstTags = JSON.parse(JSON.stringify(srcTags));
-      if ('video' === dstTags.format)
-        dstTags = node.io.setDestTags(dstTags);
       return dstTags;
     };
 
-    this.setInfo = (srcTags, dstTags/*, logLevel*/) => {
-      const srcColSpec = colMaths.getColSpec(dstTags.video.colorimetry, dstTags.video.height);
-      return setupWriter(dstTags.video.width, dstTags.video.height, srcColSpec)
-        .then(writer => node.writer = writer);
+    this.setInfo = (srcTags/*, dstTags, logLevel*/) => {
+      const srcVideoTags = srcTags.filter(t => t.format === 'video');
+      return setupBlur(srcVideoTags[0].width, srcVideoTags[0].height)
+        .then(process => node.process = process);
     };
 
     this.processGrain = (flowType, srcBufArray) => {
       if ('video' === flowType) {
-        return writeGrain(srcBufArray[0]);
+        return blurGrain(srcBufArray[0]);
       } else
         return srcBufArray[0];
     };
 
     this.quit = cb => {
-      node.writer = null;
+      node.process = null;
       clContext.releaseBuffers(node.ownerName);
       cb();
     };
+
     this.closeValve = done => this.close(done);
   }
-  util.inherits(clPack, clValve);
-  RED.nodes.registerType('OpenCL pack', clPack);
+  util.inherits(clBlur, clValve);
+  RED.nodes.registerType('OpenCL blur', clBlur);
 };
