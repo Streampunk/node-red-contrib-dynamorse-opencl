@@ -47,7 +47,7 @@ module.exports = function (RED) {
 
       const blurDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
-      /*let timings = */await node.process.process(src, blurDst);
+      /*let timings = */await clContext.checkAlloc(() => node.process.process(src, blurDst));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       src.release();

@@ -53,7 +53,7 @@ module.exports = function (RED) {
 
       const mixDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
-      /*let timings = */await node.process.process(srcArray, mixDst, mix);
+      /*let timings = */await clContext.checkAlloc(() => node.process.process(srcArray, mixDst, mix));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       srcArray.forEach(src => src.release());

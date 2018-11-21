@@ -59,7 +59,7 @@ module.exports = function (RED) {
       }
       const rgbaDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
-      /*let timings = */await node.reader.fromPacked(packedSrc, rgbaDst);
+      /*let timings = */await clContext.checkAlloc(() => node.reader.fromPacked(packedSrc, rgbaDst));
       // console.log(`read: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       if (!sendDevice)

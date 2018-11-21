@@ -9,7 +9,7 @@
     "opencl"
   ],
   "dependencies": {
-    "nodencl": "^0.1.1",
+    "nodencl": "^0.2.0",
     "osc": "^2.2.4",
     "serialport": "^7.0.2"
   },

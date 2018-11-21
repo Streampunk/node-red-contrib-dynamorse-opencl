@@ -17,7 +17,7 @@ const nodencl = require('nodencl');
 
 async function createContext(node, platformIndex, deviceIndex) {
   const platformInfo = nodencl.getPlatformInfo()[platformIndex];
-  node.log(JSON.stringify(platformInfo, null, 2));
+  // node.log(JSON.stringify(platformInfo, null, 2));
   node.log(`OpenCL context: platform index ${platformIndex}, device index ${deviceIndex}`);
   node.log(`OpenCL context: vendor: ${platformInfo.vendor}, type: ${platformInfo.devices[deviceIndex].type[0]}`);
 
@@ -48,7 +48,21 @@ module.exports = function(RED) {
     return this.context;
   };
 
-  OpenCLContext.prototype.createBuffer = function(numBytes, bufDir, bufType, owner) {
+  OpenCLContext.prototype.checkAlloc = async function(cb) {
+    let result;
+    try {
+      result = await cb();
+    } catch (err) {
+      if (-4 == err.code) { // memory allocation failure
+        this.flush();
+        result = await cb();
+      } else
+        throw err;
+    }
+    return result;
+  };
+
+  OpenCLContext.prototype.createBuffer = async function(numBytes, bufDir, bufType, owner) {
     if (!owner) throw new Error('No owner provided for createBuffer');
       
     const buf = this.buffers.find(el => !el.reserved && (el.length === numBytes) && (el.owner === owner));
@@ -56,7 +70,7 @@ module.exports = function(RED) {
       buf.reserved = true;
       return buf;
     } else return this.context
-      .then(c => c.createBuffer(numBytes, bufDir, bufType))
+      .then(c => this.checkAlloc(() => c.createBuffer(numBytes, bufDir, bufType)))
       .then(buf => {
         buf.reserved = true;
         buf.owner = owner;
@@ -67,11 +81,20 @@ module.exports = function(RED) {
       });
   };
 
+  OpenCLContext.prototype.flush = function() {
+    this.warn('Flushing free allocations');
+    this.buffers = this.buffers.filter(el => {
+      if (!el.reserved)
+        el.freeAllocation();
+      return el.reserved === true;
+    });
+  };
+
   OpenCLContext.prototype.releaseBuffers = function(owner) {
     this.buffers = this.buffers.filter(el => el.owner !== owner);
   };
 
-  OpenCLContext.prototype.createProgram = function(kernel, options) {
+  OpenCLContext.prototype.createProgram = async function(kernel, options) {
     return this.context
       .then(c => c.createProgram(kernel, options));
   };

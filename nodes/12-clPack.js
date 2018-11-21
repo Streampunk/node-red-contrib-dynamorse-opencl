@@ -54,7 +54,7 @@ module.exports = function (RED) {
 
       const packedDst = node.packedDst[frameNum++%config.maxBuffer+1];
 
-      /*let timings = */await node.writer.toPacked(src, packedDst);
+      /*let timings = */await clContext.checkAlloc(() => node.writer.toPacked(src, packedDst));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       src.release();

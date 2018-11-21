@@ -49,7 +49,7 @@ module.exports = function (RED) {
 
       const stampDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
-      /*let timings = */await node.process.process(srcArray, stampDst, premultiplied);
+      /*let timings = */await clContext.checkAlloc(() => node.process.process(srcArray, stampDst, premultiplied));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       srcArray.forEach(src => src.release());

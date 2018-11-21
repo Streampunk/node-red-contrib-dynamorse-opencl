@@ -52,7 +52,7 @@ module.exports = function (RED) {
 
       const monoDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
-      /*let timings = */await node.process.process(src, monoDst, mix);
+      /*let timings = */await clContext.checkAlloc(() => node.process.process(src, monoDst, mix));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
       src.release();
