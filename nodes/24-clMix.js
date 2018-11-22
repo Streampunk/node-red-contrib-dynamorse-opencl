@@ -85,13 +85,13 @@ module.exports = function (RED) {
 
     this.quit = cb => {
       node.process = null;
-      clContext.releaseBuffers(node.ownerName);
       cb();
     };
 
-    this.closeValve = done => {
+    this.closeValve = () => {
+      node.process = null;
+      clContext.releaseBuffers(node.ownerName);
       oscServ.removeControl(config.mixControl);
-      this.close(done);
     };
   }
   util.inherits(clMix, clValve);

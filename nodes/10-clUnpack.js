@@ -62,6 +62,8 @@ module.exports = function (RED) {
       /*let timings = */await clContext.checkAlloc(() => node.reader.fromPacked(packedSrc, rgbaDst));
       // console.log(`read: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
 
+      packedSrc.release();
+
       if (!sendDevice)
         await rgbaDst.hostAccess('readonly');
       return rgbaDst;
@@ -103,10 +105,13 @@ module.exports = function (RED) {
 
     this.quit = cb => {
       node.reader = null;
-      clContext.releaseBuffers(node.ownerName);
       cb();
     };
-    this.closeValve = done => this.close(done);
+
+    this.closeValve = () => {
+      node.reader = null;
+      clContext.releaseBuffers(node.ownerName);
+    };
   }
   util.inherits(clUnpack, clValve);
   RED.nodes.registerType('OpenCL unpack', clUnpack);

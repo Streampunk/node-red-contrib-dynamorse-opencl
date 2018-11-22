@@ -41,6 +41,23 @@ module.exports = function(RED) {
     setInterval(() => { this.buffers.forEach(el => 
       this.log(`${el.index}: ${el.owner} ${el.length} bytes ${el.reserved?'reserved':'free'}`));
     }, 1000);
+
+    this.on('close', done => {
+      this.context = null;
+      const i = setInterval(() => {
+        if (0 === this.buffers.length) {
+          clearInterval(i);
+          clearInterval(t);
+          done();
+        }
+      }, 20);
+      const t = setTimeout(() => {
+        clearInterval(i);
+        this.warn('Timed out waiting for nodes to release their OpenCL allocations');
+        this.buffers.length = 0;
+        done();
+      }, 1000);
+    });
   }
 
   OpenCLContext.prototype.getContext = function() {

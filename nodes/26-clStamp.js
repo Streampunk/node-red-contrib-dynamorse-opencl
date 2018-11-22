@@ -102,11 +102,13 @@ module.exports = function (RED) {
 
     this.quit = cb => {
       node.process = null;
-      clContext.releaseBuffers(node.ownerName);
       cb();
     };
 
-    this.closeValve = done => this.close(done);
+    this.closeValve = () => {
+      node.process = null;
+      clContext.releaseBuffers(node.ownerName);
+    };
   }
   util.inherits(clStamp, clValve);
   RED.nodes.registerType('OpenCL stamp', clStamp);

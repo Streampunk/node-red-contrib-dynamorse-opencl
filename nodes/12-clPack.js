@@ -94,10 +94,13 @@ module.exports = function (RED) {
 
     this.quit = cb => {
       node.writer = null;
-      clContext.releaseBuffers(node.ownerName);
       cb();
     };
-    this.closeValve = done => this.close(done);
+
+    this.closeValve = () => {
+      node.writer = null;
+      clContext.releaseBuffers(node.ownerName);
+    };
   }
   util.inherits(clPack, clValve);
   RED.nodes.registerType('OpenCL pack', clPack);
