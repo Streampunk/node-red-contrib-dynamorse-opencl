@@ -133,7 +133,7 @@ function clValve (RED, config) {
     }
   });
 
-  this.on('close', this.closeValve);
+  this.on('close', () => this.closeValve());
 }
 util.inherits(clValve, redioactive.Valve);
 
