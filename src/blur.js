@@ -87,7 +87,10 @@ blur.prototype.init = async function() {
 };
 
 blur.prototype.process = async function(src, dst) {
-  return await this.blurProgram.run({input: src, output: dst, dim: this.dim, filter: this.filter});
+  return await this.context.runProgram(
+    this.blurProgram,
+    { input: src, output: dst, dim: this.dim, filter: this.filter }
+  );
 };
 
 module.exports = blur;

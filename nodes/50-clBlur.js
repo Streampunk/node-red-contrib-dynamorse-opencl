@@ -29,7 +29,8 @@ module.exports = function (RED) {
     const blurDepth = +config.blurDepth;
     node.ownerName = `Blur-${node.id}`;
 
-    const clContext = RED.nodes.getNode(config.clContext);
+    const clContextNode = RED.nodes.getNode(config.clContext);
+    const clContext = clContextNode ? clContextNode.getContext() : null;
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
@@ -49,8 +50,6 @@ module.exports = function (RED) {
 
       /*let timings = */await clContext.checkAlloc(() => node.process.process(src, blurDst));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
-
-      src.release();
 
       if (!sendDevice)
         await blurDst.hostAccess('readonly');

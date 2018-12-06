@@ -29,7 +29,8 @@ module.exports = function (RED) {
     const premultiplied = config.premultiplied;
     node.ownerName = `Stamp-${node.id}`;
 
-    const clContext = RED.nodes.getNode(config.clContext);
+    const clContextNode = RED.nodes.getNode(config.clContext);
+    const clContext = clContextNode ? clContextNode.getContext() : null;
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
@@ -51,8 +52,6 @@ module.exports = function (RED) {
 
       /*let timings = */await clContext.checkAlloc(() => node.process.process(srcArray, stampDst, premultiplied));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
-
-      srcArray.forEach(src => src.release());
 
       if (!sendDevice)
         await stampDst.hostAccess('readonly');

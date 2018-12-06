@@ -27,11 +27,11 @@ module.exports = function (RED) {
 
     const node = this;
     const numInputs = 1;
-    let frameNum = 0;
     const sendDevice = config.sendDeviceBuffer;
     node.ownerName = `Pack-${node.id}`;
 
-    const clContext = RED.nodes.getNode(config.clContext);
+    const clContextNode = RED.nodes.getNode(config.clContext);
+    const clContext = clContextNode ? clContextNode.getContext() : null;
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
@@ -41,10 +41,6 @@ module.exports = function (RED) {
       const writer = new node.io.writer(node, clContext, width, height, colSpec);
       await writer.init();
 
-      node.packedDst = [];
-      for (let i=0; i<config.maxBuffer+1; ++i)
-        node.packedDst.push(await clContext.createBuffer(node.numBytesPacked, 'writeonly', 'coarse', node.ownerName));
-
       return writer;
     }
 
@@ -52,12 +48,10 @@ module.exports = function (RED) {
       if (!src.hasOwnProperty('hostAccess'))
         throw new Error('OpenCL pack expects an OpenCL source buffer');
 
-      const packedDst = node.packedDst[frameNum++%config.maxBuffer+1];
+      const packedDst = await clContext.createBuffer(node.numBytesPacked, 'writeonly', 'coarse', node.ownerName);
 
       /*let timings = */await clContext.checkAlloc(() => node.writer.toPacked(src, packedDst));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
-
-      src.release();
 
       if (!sendDevice)
         await packedDst.hostAccess('readonly');

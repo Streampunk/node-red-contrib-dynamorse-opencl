@@ -30,7 +30,8 @@ module.exports = function (RED) {
     const sendDevice = config.sendDeviceBuffer;
     node.ownerName = `Unpack-${node.id}`;
 
-    const clContext = RED.nodes.getNode(config.clContext);
+    const clContextNode = RED.nodes.getNode(config.clContext);
+    const clContext = clContextNode ? clContextNode.getContext() : null;
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
@@ -52,17 +53,15 @@ module.exports = function (RED) {
       else {
         if (!packedSrc) {
           const numBytesSrc = node.io.getPitchBytes(node.width) * node.height;
-          node.packedSrc = await clContext.createBuffer(numBytesSrc, 'readonly', 'coarse', node.ownerName);
+          node.packedSrc = await clContext.createBuffer(numBytesSrc, 'readwrite', 'coarse', node.ownerName);
           packedSrc = node.packedSrc;
         }
         await packedSrc.hostAccess('writeonly', srcBuf);
       }
       const rgbaDst = await clContext.createBuffer(node.numBytesRGBA, 'readwrite', 'coarse', node.ownerName);
 
-      /*let timings = */await clContext.checkAlloc(() => node.reader.fromPacked(packedSrc, rgbaDst));
+      /*let timings = */await node.reader.fromPacked(packedSrc, rgbaDst);
       // console.log(`read: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
-
-      packedSrc.release();
 
       if (!sendDevice)
         await rgbaDst.hostAccess('readonly');

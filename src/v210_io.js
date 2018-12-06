@@ -286,8 +286,11 @@ reader.prototype.init = async function() {
 };
 
 reader.prototype.fromPacked = async function(src, dst) {
-  return await this.v210ReadProgram.run({input: src, output: dst, width: this.width, colMatrix: this.colMatrix, 
-    gammaLut: this.gammaLut, gamutMatrix: this.gamutMatrix});
+  return await this.context.runProgram(
+    this.v210ReadProgram, 
+    { input: src, output: dst, width: this.width,
+      colMatrix: this.colMatrix, gammaLut: this.gammaLut, gamutMatrix: this.gamutMatrix }
+  );
 };
 
 function writer(node, context, width, height, colSpec) {
@@ -326,8 +329,11 @@ writer.prototype.init = async function() {
 };
 
 writer.prototype.toPacked = async function(src, dst) {
-  return await this.v210WriteProgram.run({input: src, output: dst, width: this.width, colMatrix: this.colMatrix, 
-    gammaLut: this.gammaLut});
+  return await this.context.runProgram(
+    this.v210WriteProgram,
+    { input: src, output: dst, width: this.width,
+      colMatrix: this.colMatrix, gammaLut: this.gammaLut }
+  );
 };
 
 module.exports = {

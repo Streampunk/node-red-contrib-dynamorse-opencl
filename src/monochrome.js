@@ -73,8 +73,11 @@ monochrome.prototype.init = async function() {
 };
 
 monochrome.prototype.process = async function(src, dst, pressure) {
-  return await this.monochromeProgram.run({input: src, output: dst, width: this.width, 
-    monoCoeffs: this.monoCoeffs, pressure: pressure});
+  return await this.context.runProgram(
+    this.monochromeProgram,
+    { input: src, output: dst, width: this.width,
+      monoCoeffs: this.monoCoeffs, pressure: pressure }
+  );
 };
 
 module.exports = monochrome;

@@ -64,8 +64,10 @@ mix.prototype.init = async function() {
 };
 
 mix.prototype.process = async function(srcArray, dst, pressure) {
-  return await this.mixProgram.run({inputA: srcArray[0], inputB: srcArray[1], output: dst, width: this.width,
-    pressure: pressure});
+  return await this.context.runProgram(
+    this.mixProgram,
+    { inputA: srcArray[0], inputB: srcArray[1], output: dst, width: this.width, pressure: pressure}
+  );
 };
 
 module.exports = mix;

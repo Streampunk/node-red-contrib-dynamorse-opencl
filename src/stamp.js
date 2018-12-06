@@ -65,8 +65,11 @@ stamp.prototype.init = async function() {
 };
 
 stamp.prototype.process = async function(srcArray, dst, premultiplied) {
-  return await this.stampProgram.run({inputA: srcArray[0], inputB: srcArray[1], output: dst, width: this.width,
-    premultVal: premultiplied ? 1 : 0});
+  return await this.context.runProgram(
+    this.stampProgram,
+    { inputA: srcArray[0], inputB: srcArray[1], output: dst, width: this.width,
+      premultVal: premultiplied ? 1 : 0}
+  );
 };
 
 module.exports = stamp;

@@ -34,7 +34,8 @@ module.exports = function (RED) {
     const oscServ = oscServer.getInstance(this);
     oscServ.addControl(config.mixControl, val => mixVal = val);
 
-    const clContext = RED.nodes.getNode(config.clContext);
+    const clContextNode = RED.nodes.getNode(config.clContext);
+    const clContext = clContextNode ? clContextNode.getContext() : null;
     if (!clContext)
       return node.warn('OpenCL Context config not found!!');
 
@@ -54,8 +55,6 @@ module.exports = function (RED) {
 
       /*let timings = */await clContext.checkAlloc(() => node.process.process(src, monoDst, mix));
       // console.log(`write: ${timings.dataToKernel}, ${timings.kernelExec}, ${timings.dataFromKernel}, ${timings.totalTime}`);
-
-      src.release();
 
       if (!sendDevice)
         await monoDst.hostAccess('readonly');
@@ -85,7 +84,6 @@ module.exports = function (RED) {
 
     this.quit = cb => {
       node.process = null;
-      clContext.releaseBuffers(node.ownerName);
       cb();
     };
 

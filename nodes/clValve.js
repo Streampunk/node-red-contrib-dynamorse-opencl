@@ -26,6 +26,7 @@ function clValve (RED, config) {
   let setupError = null;
   let srcFlows = null;
   let dstID = {};
+  let active = true;
 
   this.doProcess = (grainSet, push) => {
     const grainTypes = Object.keys(grainSet);
@@ -111,7 +112,7 @@ function clValve (RED, config) {
           const queue = srcFlows.checkID(x);
           if (queue) {
             const grainSet = srcFlows.addGrain(x, queue, next);
-            if (grainSet) {
+            if (grainSet && active) {
               this.doProcess (grainSet, push);
             }
           } else {
@@ -133,7 +134,10 @@ function clValve (RED, config) {
     }
   });
 
-  this.on('close', () => this.closeValve());
+  this.on('close', () => {
+    active = false;
+    this.closeValve();
+  });
 }
 util.inherits(clValve, redioactive.Valve);
 
